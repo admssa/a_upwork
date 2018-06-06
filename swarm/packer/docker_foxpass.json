@@ -1,0 +1,61 @@
+{
+  "variables": {
+    "vpc": "{{env `BUILD_VPC_ID`}}",
+    "subnet": "{{env `BUILD_SUBNET_ID`}}",
+    "aws_region": "{{env `AWS_REGION`}}",
+    "foxpass_base_dn": "{{ env `foxpass_base_dn` }}",
+    "foxpass_pw": "{{ env `foxpass_pw` }}",
+    "foxpass_api_key": "{{ env `foxpass_api_key` }}",
+    "ami_name": "DockerSwarm_FoxPass"
+  },
+  "builders": [{
+    "name": "AWS AMI Builder - Swarm ",
+    "type": "amazon-ebs",
+    "region": "{{user `aws_region`}}",
+    "source_ami_filter": {
+        "filters": {
+          "virtualization-type": "hvm",
+          "name": "debian-stretch-hvm-x86_64-gp2-2018*",
+          "root-device-type": "ebs"
+        },
+        "owners": ["379101102735"],
+        "most_recent": true
+    },
+    "instance_type": "t2.micro",
+    "ssh_username": "admin",
+    "ami_name": "{{user `ami_name` | clean_ami_name}}",
+    "tags": {
+      "Name": "{{user `ami_name`}}"
+    },
+    "run_tags": {
+      "Name": "{{user `ami_name`}}"
+    },
+    "run_volume_tags": {
+      "Name": "{{user `ami_name`}}"
+    },
+    "snapshot_tags": {
+      "Name": "{{user `ami_name`}}"
+    },
+    "ami_description": "Docker ans FoxPass installed",
+    "associate_public_ip_address": "true",
+    "vpc_id": "{{user `vpc`}}",
+    "subnet_id": "{{user `subnet`}}"
+  }],
+  "provisioners": [
+    {
+        "type": "shell",
+        "inline": [
+            "sudo apt-get update",
+            "sudo apt-get install -y jq apt-transport-https ca-certificates curl gnupg2 software-properties-common nfs-common",
+            "curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -",
+            "sudo add-apt-repository \"deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable\"",
+            "sudo apt-get update",
+            "sudo apt-get install -y docker-ce",
+            "sudo usermod -aG docker admin",
+            "sudo systemctl enable docker",
+            "wget https://raw.githubusercontent.com/foxpass/foxpass-setup/master/linux/ubuntu/16.04/foxpass_setup.py",
+            "sudo python3 foxpass_setup.py --base-dn {{user `foxpass_base_dn`}} --bind-user {{user `foxpass_user`}} --bind-pw {{user `foxpass_pw`}} --api-key {{user `foxpass_api_key`}}"
+        ]
+    }
+  ]
+}
